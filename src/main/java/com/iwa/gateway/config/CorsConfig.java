@@ -2,30 +2,25 @@ package com.iwa.gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.cors.CorsConfigurationSource;
-
-import java.util.Arrays;
+import org.springframework.util.CollectionUtils;
 
 @Configuration
 public class CorsConfig {
-    /*
-     * @Bean
-     * public CorsConfigurationSource corsConfigurationSource() {
-     * CorsConfiguration configuration = new CorsConfiguration();
-     * configuration.setAllowedOrigins(Arrays.asList("*")); // Adjust this to
-     * restrict the origins
-     * configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH",
-     * "DELETE", "OPTIONS"));
-     * configuration.setAllowedHeaders(Arrays.asList("authorization",
-     * "content-type", "x-auth-token"));
-     * configuration.setExposedHeaders(Arrays.asList("x-auth-token"));
-     * UrlBasedCorsConfigurationSource source = new
-     * UrlBasedCorsConfigurationSource();
-     * source.registerCorsConfiguration("/**", configuration);
-     * return source;
-     * }
-     */
 
+    @Bean
+    public CorsWebFilter corsWebFilter() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.setAllowCredentials(true);
+        corsConfig.addAllowedOrigin("*");
+        corsConfig.addAllowedHeader("*");
+        corsConfig.addAllowedMethod("*");
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig);
+
+        return new CorsWebFilter(source);
+    }
 }

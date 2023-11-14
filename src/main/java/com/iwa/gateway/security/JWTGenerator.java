@@ -4,13 +4,14 @@ import java.util.Date;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.Claims;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.stereotype.Component;
 
 @Component
 public class JWTGenerator {
 
-    private String key  = SecurityConstants.JWT_SECRET;
+    @Value("${jwt.secret}") private String key;
 
     public String getUsernameFromJWT(String token){
         Claims claims = Jwts.parser()

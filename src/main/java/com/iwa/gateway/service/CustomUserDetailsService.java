@@ -1,22 +1,23 @@
 package com.iwa.gateway.service;
 
 import com.iwa.gateway.dto.UserDetailsDTO;
-import com.iwa.gateway.model.Role;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
-import java.lang.reflect.Array;
 import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Collections;
 
 @Service
 public class CustomUserDetailsService {
@@ -30,24 +31,35 @@ public class CustomUserDetailsService {
         this.usersServiceUrl = usersServiceUrl;
     }
 
+
     public Mono<User> findByUsername(String username) {
-        // Make a call to the Users microservice to fetch user details
         return webClientBuilder.build()
                 .get()
                 .uri(usersServiceUrl + "/{username}", username)
                 .retrieve()
-                .bodyToMono(UserDetailsDTO.class) // Assuming UserData is the concrete class you use
-                .map(userDetailsDTO -> {
-                    // Create a Spring Security User object from the retrieved data
-                    return new User(userDetailsDTO.getUsername(), userDetailsDTO.getPassword(), mapRolesToAuthorities(userDetailsDTO.getRoles()));
-                })
-                .doOnError(error -> {
-                    // Handle errors, for example, logging or returning a default user details
+                .bodyToMono(UserDetailsDTO.class)
+                .map(userDetailsDTO -> new User(
+                        userDetailsDTO.getUsername(),
+                        userDetailsDTO.getPassword(),
+                        mapRoleToAuthorities(userDetailsDTO.getRole())
+                ))
+                .onErrorResume(e -> {
+                    System.out.println("Error occurred while retrieving user details: " + e.getMessage());
+                    if(e instanceof WebClientResponseException.NotFound)
+                        return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found", e));
+                    else if(e instanceof WebClientResponseException.BadRequest)
+                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bad request", e));
+                    else
+                        return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", e));
                 });
     }
 
-    private Collection<GrantedAuthority> mapRolesToAuthorities(List<Role> roles) {
-        return roles.stream().map(role -> new SimpleGrantedAuthority(role.getName())).collect(Collectors.toList());
+    /**
+     * @param role : the role string to be mapped to authorities
+     * **/
+    private Collection<GrantedAuthority> mapRoleToAuthorities(String role) {
+        GrantedAuthority authority = new SimpleGrantedAuthority(role);
+        return Collections.singletonList(authority);
     }
 
 }

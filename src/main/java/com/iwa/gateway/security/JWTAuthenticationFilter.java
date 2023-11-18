@@ -28,34 +28,43 @@ public class JWTAuthenticationFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         // logic for permitAll paths
         PathPatternParser pathPatternParser = new PathPatternParser();
-        PathPattern pathPattern = pathPatternParser.parse("/users-api/api/auth/**");
-        boolean shouldSkip = pathPattern.matches(exchange.getRequest().getPath().pathWithinApplication());
+        PathPattern pathPatternLogin = pathPatternParser.parse("/users-api/api/auth/login");
+        PathPattern pathPatternRegister = pathPatternParser.parse("/users-api/api/auth/register");
+        boolean shouldSkipLogin = pathPatternLogin.matches(exchange.getRequest().getPath().pathWithinApplication());
+        boolean shouldSkipRegister = pathPatternRegister.matches(exchange.getRequest().getPath().pathWithinApplication());
 
-        if (shouldSkip) {
+        if (shouldSkipLogin || shouldSkipRegister){
             return chain.filter(exchange); // Skip further processing for permitAll paths
         }
 
-        // logic for JWT validation
+        // logic for JWT validation - get the token from the request
         ServerHttpRequest request = exchange.getRequest();
         String token = getJWTFromRequest(request);
 
-        System.out.println("token: " + token);
-
-        System.out.println("tokenGenerator.validateToken(token): " + tokenGenerator.validateToken(token));
-        if (token != null && tokenGenerator.validateToken(token)) {
-
-            System.out.println("token is valid");
+        // Validate the token
+        boolean isTokenValid = tokenGenerator.validateToken(token);
+        if (token != null && isTokenValid) {
+            // extract the user details from the token
             String username = tokenGenerator.getUsernameFromJWT(token);
+            Long userId = tokenGenerator.getUserIdFromToken(token);
+            String role = tokenGenerator.getRoleFromToken(token);
 
-            System.out.println("username: " + username);
+            // Add attributes to the request
+            ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+                    .header("AuthUserId", userId.toString())
+                    .header("AuthUsername", username)
+                    .header("AuthUserRole", role)
+                    .build();
+
+            // Mutate the exchange with the new request containing the headers
+            ServerWebExchange mutatedExchange = exchange.mutate().request(mutatedRequest).build();
+
+            // Get the user details from the database and set the authentication in the context
             Mono<User> userDetailsMono = customUserDetailsService.findByUsername(username);
-
-            System.out.println("userDetailsMono: " + userDetailsMono);
-
             return userDetailsMono.flatMap(userDetails -> {
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
-                return chain.filter(exchange)
+                return chain.filter(mutatedExchange)
                         .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authenticationToken));
             });
         }

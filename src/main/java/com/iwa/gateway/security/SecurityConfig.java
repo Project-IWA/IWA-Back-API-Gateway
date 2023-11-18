@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
@@ -34,7 +35,11 @@ public class SecurityConfig {
                 .authenticationEntryPoint((swe, e) -> Mono.defer(() -> jwtAuthEntryPoint.commence(swe, e)))
                 .and()
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/users-api/api/auth/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/notifications-api/api/notifications").hasAuthority("Admin")
+                        .pathMatchers(HttpMethod.PUT, "/notifications-api/api/notifications/{id}").hasAuthority("Admin")
+                        .pathMatchers(HttpMethod.DELETE, "/users-api/api/users/{id}").hasAuthority("Admin")
+                        .pathMatchers("/users-api/api/auth/register").permitAll()
+                        .pathMatchers("/users-api/api/auth/login").permitAll()
                         .anyExchange().authenticated())
                 .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .httpBasic().disable(); // Disabled basic authentication

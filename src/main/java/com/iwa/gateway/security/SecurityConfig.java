@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.DELETE, "/users-api/api/users/{id}").hasAuthority("Admin")
                         .pathMatchers("/users-api/api/auth/register").permitAll()
                         .pathMatchers("/users-api/api/auth/login").permitAll()
+                        .pathMatchers("/users-api/api/formules").permitAll()
                         .pathMatchers("/kotlin-api/api/messages").permitAll()
                         .anyExchange().authenticated())
                 .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)

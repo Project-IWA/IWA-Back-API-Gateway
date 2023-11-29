@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .pathMatchers("/users-api/api/auth/login").permitAll()
                         .pathMatchers("/users-api/api/formules").permitAll()
                         .pathMatchers("/kotlin-api/api/messages").permitAll()
+                        .pathMatchers("/nouvelles-api/api/messages/").permitAll()
                         .anyExchange().authenticated())
                 .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .httpBasic().disable(); // Disabled basic authentication
